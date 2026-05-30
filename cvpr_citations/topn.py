@@ -6,9 +6,9 @@
   uv run python topn.py --top 30  # Top-30
 
 出力:
-  output/output_{year}/top{N}.csv   -- 年度別ランキング
-  output/top{N}_all_years.csv       -- 全年度まとめ CSV
-  output/top{N}_all_years.json      -- 全年度まとめ JSON
+  output/result/output_{year}/top{N}.csv   -- 年度別ランキング
+  output/result/top{N}_all_years.csv       -- 全年度まとめ CSV
+  output/result/top{N}_all_years.json      -- 全年度まとめ JSON
 """
 
 import argparse
@@ -46,11 +46,12 @@ def main() -> None:
     n = args.top
 
     base = Path(__file__).parent
-    out_base = base / "output"
-    cache_files = sorted(out_base.glob("cache_citations_202*.json"))
+    cache_dir = base / "output" / "cache"
+    result_dir = base / "output" / "result"
+    cache_files = sorted(cache_dir.glob("cache_citations_202*.json"))
 
     if not cache_files:
-        print("output/cache_citations_202x.json が見つかりません。")
+        print("output/cache/cache_citations_202x.json が見つかりません。")
         return
 
     all_rows: list[dict] = []
@@ -81,7 +82,7 @@ def main() -> None:
                 "authors": authors_str,
             })
 
-        year_dir = out_base / f"output_{year}"
+        year_dir = result_dir / f"output_{year}"
         year_dir.mkdir(parents=True, exist_ok=True)
         year_csv = year_dir / f"top{n}.csv"
         df[["title", "citationCount", "year", "venue", "authors"]].to_csv(year_csv)
@@ -91,12 +92,12 @@ def main() -> None:
         print("出力データがありません。")
         return
 
-    out_base.mkdir(parents=True, exist_ok=True)
-    out_csv = out_base / f"top{n}_all_years.csv"
+    result_dir.mkdir(parents=True, exist_ok=True)
+    out_csv = result_dir / f"top{n}_all_years.csv"
     pd.DataFrame(all_rows).to_csv(out_csv, index=False)
     print(f"\n→ 全年度 CSV  : {out_csv}")
 
-    out_json = out_base / f"top{n}_all_years.json"
+    out_json = result_dir / f"top{n}_all_years.json"
     out_json.write_text(json.dumps(all_rows, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"→ 全年度 JSON : {out_json}")
 

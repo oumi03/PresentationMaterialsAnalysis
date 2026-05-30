@@ -14,11 +14,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # ============================================================
 LIMIT=20          # 処理する論文数
 API_KEY="${SEMANTIC_SCHOLAR_API_KEY:-}"   # .env または環境変数から取得
-OUTPUT="output/output_test"
+OUTPUT="output/result/output_test"
 # ============================================================
 
 cd "$(dirname "$0")"
-mkdir -p output
+mkdir -p output/cache output/result
 
 echo "=== CVPR Citation Analyzer — テスト実行 (${LIMIT} 本) ==="
 
@@ -27,14 +27,14 @@ if [ -n "$API_KEY" ]; then
         --limit "$LIMIT" \
         --api-key "$API_KEY" \
         --output "$OUTPUT" \
-        --papers-cache "output/cache_papers_test.json" \
-        --citations-cache "output/cache_citations_test.json"
+        --papers-cache "output/cache/cache_papers_test.json" \
+        --citations-cache "output/cache/cache_citations_test.json"
 else
     uv run python main.py \
         --limit "$LIMIT" \
         --output "$OUTPUT" \
-        --papers-cache "output/cache_papers_test.json" \
-        --citations-cache "output/cache_citations_test.json"
+        --papers-cache "output/cache/cache_papers_test.json" \
+        --citations-cache "output/cache/cache_citations_test.json"
 fi
 
 echo ""

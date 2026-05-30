@@ -57,21 +57,21 @@ def main() -> None:
     )
     parser.add_argument(
         "--output",
-        default="output",
+        default="output/result/output",
         metavar="DIR",
-        help="Directory for plots and CSV (default: ./output)",
+        help="Directory for plots and CSV (default: output/result/output)",
     )
     parser.add_argument(
         "--papers-cache",
-        default="cache_papers.json",
+        default="output/cache/cache_papers.json",
         metavar="FILE",
-        help="Cache file for scraped paper titles (default: cache_papers.json)",
+        help="Cache file for scraped paper titles (default: output/cache/cache_papers.json)",
     )
     parser.add_argument(
         "--citations-cache",
-        default="cache_citations.json",
+        default="output/cache/cache_citations.json",
         metavar="FILE",
-        help="Cache file for Semantic Scholar results (default: cache_citations.json)",
+        help="Cache file for Semantic Scholar results (default: output/cache/cache_citations.json)",
     )
     args = parser.parse_args()
 

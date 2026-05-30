@@ -14,10 +14,10 @@ def extract_year(path: Path) -> str | None:
 
 def main() -> None:
     base = Path(__file__).parent
-    cache_files = sorted((base / "output").glob("cache_citations_202*.json"))
+    cache_files = sorted((base / "output" / "cache").glob("cache_citations_202*.json"))
 
     if not cache_files:
-        print("cache_citations_202x.json が見つかりません。")
+        print("output/cache/cache_citations_202x.json が見つかりません。")
         return
 
     summary_rows: list[dict] = []
@@ -75,17 +75,17 @@ def main() -> None:
         print(f"    found : {row['matched_title'][:80]}")
 
     # --- 保存 ---
-    out_dir = base / "output"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    sum_csv = out_dir / "similarity_summary.csv"
+    result_dir = base / "output" / "result"
+    result_dir.mkdir(parents=True, exist_ok=True)
+    sum_csv = result_dir / "similarity_summary.csv"
     df_sum.to_csv(sum_csv, index=False)
     print(f"\n→ サマリー CSV: {sum_csv}")
 
-    det_csv = out_dir / "similarity_details.csv"
+    det_csv = result_dir / "similarity_details.csv"
     df_det.to_csv(det_csv, index=False)
     print(f"→ 詳細 CSV    : {det_csv}  ({len(df_det)} 件, sim < 1.0)")
 
-    det_json = out_dir / "similarity_details.json"
+    det_json = result_dir / "similarity_details.json"
     det_json.write_text(
         json.dumps(detail_rows, ensure_ascii=False, indent=2),
         encoding="utf-8",

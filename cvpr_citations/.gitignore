@@ -12,6 +12,7 @@ cache*.json
 
 # --- 生成物（スクリプト実行で再作成可能）---
 output/
+cache/
 
 # --- OS ---
 .DS_Store
