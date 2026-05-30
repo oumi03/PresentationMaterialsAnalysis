@@ -5,16 +5,19 @@
 
 set -euo pipefail
 
+# .env が存在すれば読み込む（API キーを環境変数として設定）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+[ -f "$SCRIPT_DIR/.env" ] && source "$SCRIPT_DIR/.env"
+
 # ============================================================
 # パラメータ設定
 # ============================================================
 YEAR=2026         # 対象年度（2021〜2026）
-API_KEY="s2k-PUTbCVeGQSQueTxRiQ23GVW0icNPqscf4MO2HljI"        # Semantic Scholar API キー（不要なら空のまま）
-# API_KEY=""
-                  # 取得先: https://www.semanticscholar.org/product/api#api-key-form
+API_KEY="${SEMANTIC_SCHOLAR_API_KEY:-}"   # .env または環境変数から取得
+                  # キー取得先: https://www.semanticscholar.org/product/api#api-key-form
 # ============================================================
 
-OUTPUT="output_${YEAR}"
+OUTPUT="output/output_${YEAR}"
 
 # 年度に対応する URL
 case "$YEAR" in
@@ -31,6 +34,7 @@ case "$YEAR" in
 esac
 
 cd "$(dirname "$0")"
+mkdir -p output
 
 echo "=== CVPR Citation Analyzer — 本番実行 ==="
 echo "  対象: CVPR ${YEAR}"
@@ -49,14 +53,14 @@ if [ -n "$API_KEY" ]; then
         --url "$URL" \
         --api-key "$API_KEY" \
         --output "$OUTPUT" \
-        --papers-cache "cache_papers_${YEAR}.json" \
-        --citations-cache "cache_citations_${YEAR}.json"
+        --papers-cache "output/cache_papers_${YEAR}.json" \
+        --citations-cache "output/cache_citations_${YEAR}.json"
 else
     uv run python main.py \
         --url "$URL" \
         --output "$OUTPUT" \
-        --papers-cache "cache_papers_${YEAR}.json" \
-        --citations-cache "cache_citations_${YEAR}.json"
+        --papers-cache "output/cache_papers_${YEAR}.json" \
+        --citations-cache "output/cache_citations_${YEAR}.json"
 fi
 
 echo ""

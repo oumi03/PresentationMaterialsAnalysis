@@ -1,1 +1,17 @@
-./output*
+# --- 秘密情報 ---
+.env
+.claude/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+
+# --- キャッシュ（大容量データファイル、再取得可能）---
+cache*.json
+
+# --- 生成物（スクリプト実行で再作成可能）---
+output/
+
+# --- OS ---
+.DS_Store

@@ -14,7 +14,7 @@ def extract_year(path: Path) -> str | None:
 
 def main() -> None:
     base = Path(__file__).parent
-    cache_files = sorted(base.glob("cache_citations_202*.json"))
+    cache_files = sorted((base / "output").glob("cache_citations_202*.json"))
 
     if not cache_files:
         print("cache_citations_202x.json が見つかりません。")
@@ -75,7 +75,8 @@ def main() -> None:
         print(f"    found : {row['matched_title'][:80]}")
 
     # --- 保存 ---
-    out_dir = base
+    out_dir = base / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
     sum_csv = out_dir / "similarity_summary.csv"
     df_sum.to_csv(sum_csv, index=False)
     print(f"\n→ サマリー CSV: {sum_csv}")
