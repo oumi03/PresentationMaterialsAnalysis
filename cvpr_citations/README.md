@@ -53,21 +53,60 @@ bash run_test.sh
 bash run_statistics.sh
 ```
 
-`run_statistics.sh` 内の変数で対象年度と Top-N 件数を指定します。
+ファイル冒頭の変数で対象年度と件数を指定します。
 
 | 変数 | 説明 | デフォルト |
 |------|------|-----------|
-| `YEAR` | 対象年度 | `2025` |
+| `YEAR` | 対象年度（2023〜2025） | `2025` |
 | `TOP_N` | Top-N 抽出の件数 | `10` |
 
-実行される処理:
+以下の4ステップが順番に実行されます。
 
-| ステップ | スクリプト | 内容 |
-|---------|-----------|------|
-| [1] | `scrape_links.py` | cvpr.thecvf.com から論文タイトル・リンク種別・発表種別を収集 |
-| [2] | `citation_comparison.py` | リンク種別・発表種別ごとの引用数比較・可視化 |
-| [3] | `topn.py` | 全年度の引用数 Top-N 抽出 |
-| [4] | `similarity_stats.py` | タイトルマッチングの類似度統計 |
+#### [1] scrape_links.py — リンク情報の収集
+
+`https://cvpr.thecvf.com/Conferences/{YEAR}/AcceptedPapers` から全採択論文のリンク情報を収集し、`output/result/cvpr{YEAR}_links.csv` に保存します。HTML は `output/cache/` にキャッシュされるため、2回目以降はネットワークアクセスなしで動作します。
+
+収集する列:
+
+| 列 | 内容 |
+|----|------|
+| `title` | 論文タイトル |
+| `link_type` | `github` / `project_page` / `none` |
+| `link` | リンク URL（なければ空） |
+| `presentation_type` | `highlight` / `award_candidate`（2023 のみ） / `poster` |
+
+#### [2] citation_comparison.py — リンク・発表種別ごとの引用数比較
+
+`scrape_links.py` の出力と `run_full.sh` で取得した引用数キャッシュをタイトルで突き合わせ、グループ別の統計量と比較図を生成します。
+
+生成される図（各図: 左=ボックスプロット log スケール、右=中央値バーチャート IQR 付き）:
+
+| ファイル | 比較軸 | グループ |
+|---------|--------|---------|
+| `comparison_{YEAR}_01_link_type.png` | リンク種別（3値） | GitHub / Project Page / No Link |
+| `comparison_{YEAR}_02_has_link.png` | リンク有無（2値） | Has Link / No Link |
+| `comparison_{YEAR}_03_presentation.png` | 発表種別 | Highlight / Poster（/ Award Candidate） |
+| `comparison_{YEAR}_04_ptype_x_link.png` | 発表種別 × リンク有無（4値） | Highlight+Link / Highlight+No Link / Poster+Link / Poster+No Link |
+
+統計量（n / mean / median / std / Q25 / Q75 / max）は `citation_comparison_{YEAR}.csv` / `.json` にも保存されます。
+
+#### [3] topn.py — 全年度 Top-N 引用論文の抽出
+
+`output/cache/cache_citations_202*.json` を全年度分読み込み、引用数上位 TOP_N 件を年度別・全年度まとめの両形式で出力します。
+
+| ファイル | 内容 |
+|---------|------|
+| `output/result/output_{year}/top{N}.csv` | 年度別ランキング |
+| `output/result/top{N}_all_years.csv / .json` | 全年度まとめ |
+
+#### [4] similarity_stats.py — タイトルマッチング類似度統計
+
+Semantic Scholar のタイトル検索が返した結果とクエリの類似度を年度ごとに集計します。類似度が 1.0 未満（完全一致でない）の論文は `similarity_details.csv` / `.json` に詳細を保存します。
+
+| ファイル | 内容 |
+|---------|------|
+| `output/result/similarity_summary.csv` | 年度別サマリー |
+| `output/result/similarity_details.csv / .json` | 類似度 < 1.0 の論文一覧 |
 
 ## ファイル構成
 
@@ -107,62 +146,9 @@ cvpr_citations/
         ├── comparison_{year}_04_ptype_x_link.png
         ├── top{N}_all_years.csv / .json
         ├── similarity_summary.csv
-        ├── similarity_details.csv / .json
+        ├── similarity_details.csv
         └── similarity_details.json
 ```
-
-## 各スクリプトの詳細
-
-### scrape_links.py
-
-```bash
-uv run python scrape_links.py --year 2025  # 2023 / 2024 / 2025 に対応
-```
-
-cvpr.thecvf.com の採択論文ページから以下を収集します。
-
-| 列 | 内容 |
-|----|------|
-| `title` | 論文タイトル |
-| `link_type` | `github` / `project_page` / `none` |
-| `link` | リンク URL（なければ空） |
-| `presentation_type` | `highlight` / `award_candidate`（2023 のみ） / `poster` |
-
-HTML は `output/cache/` にキャッシュされるため、再実行時はネットワークアクセスなしで処理します。
-
-### citation_comparison.py
-
-```bash
-uv run python citation_comparison.py --year 2025
-```
-
-`scrape_links.py` と `run_full.sh` の出力を突き合わせ、以下の比較図・統計を生成します。
-
-| 出力ファイル | 内容 |
-|------------|------|
-| `comparison_{year}_01_link_type.png` | GitHub / Project Page / No Link の3値比較 |
-| `comparison_{year}_02_has_link.png` | リンクあり / リンクなし の2値比較 |
-| `comparison_{year}_03_presentation.png` | 発表種別（Highlight / Poster 等）の比較 |
-| `comparison_{year}_04_ptype_x_link.png` | 発表種別 × リンク有無の4値クロス比較 |
-| `citation_comparison_{year}.csv / .json` | グループ別統計量（n / mean / median / std / Q25 / Q75 / max） |
-
-各図は左パネルにボックスプロット（log スケール）、右パネルに中央値バーチャート（IQR をエラーバーで表示）を並べた構成です。
-
-### topn.py
-
-```bash
-uv run python topn.py --top 10
-```
-
-`output/cache/cache_citations_202*.json` を読み込み、全年度の引用数 Top-N を抽出します。
-
-### similarity_stats.py
-
-```bash
-uv run python similarity_stats.py
-```
-
-Semantic Scholar のタイトルマッチング精度を確認します。類似度が 1.0 未満（完全一致でない）の論文を詳細表示・保存します。
 
 ## API レート制限
 
