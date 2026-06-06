@@ -1,16 +1,19 @@
-"""CVPR 採択論文のタイトルとプロジェクトリンクを収集して保存する.
+"""CVPR / ICCV / WACV 採択論文のタイトルとプロジェクトリンクを収集して保存する.
 
 使い方:
-  uv run python scrape_links.py              # 2025（デフォルト）
-  uv run python scrape_links.py --year 2023  # 2023〜2025 に対応
+  uv run python scrape_links.py                        # CVPR 2025（デフォルト）
+  uv run python scrape_links.py --conf iccv --year 2023
+  uv run python scrape_links.py --conf wacv --year 2024
 
 出力:
-  output/cvpr{year}_links.csv   -- タイトル・リンク種別・URL の一覧
-  output/cvpr{year}_links.json  -- 同内容の JSON
+  output/result_{conf}/{conf}{year}_links.csv   -- タイトル・リンク種別・URL の一覧
+  output/result_{conf}/{conf}{year}_links.json  -- 同内容の JSON
+  ※ cvpr の場合は output/result/{conf}{year}_links.csv
 
 presentation_type の値:
-  highlight       -- Highlight バッジあり（2023〜2025 共通）
-  award_candidate -- Award Candidate バッジあり（2023 のみ）
+  highlight       -- Highlight バッジあり（CVPR 2023〜2025 共通）
+  award_candidate -- Award Candidate バッジあり（CVPR 2023 のみ）
+  oral            -- Oral バッジあり（ICCV）
   poster          -- 上記以外
 """
 
@@ -23,26 +26,21 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
+from conf_utils import (
+    CONF_EXTRA_BADGES,
+    CONF_YEAR_URLS,
+    add_conf_argument,
+    cache_dir,
+    result_dir,
+)
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "CVPR-citation-research/1.0 (academic use; non-commercial)"
+        "CVF-citation-research/1.0 (academic use; non-commercial)"
     )
 }
 CRAWL_DELAY = 2.0
-
-YEAR_URLS = {
-    2023: "https://cvpr.thecvf.com/Conferences/2023/AcceptedPapers",
-    2024: "https://cvpr.thecvf.com/Conferences/2024/AcceptedPapers",
-    2025: "https://cvpr.thecvf.com/Conferences/2025/AcceptedPapers",
-    # 2026: "https://cvpr.thecvf.com/Conferences/2026/AcceptedPapers",
-}
-
-# 年ごとに追加で検出するバッジ（presentation_type に反映）
-# 値が多い場合は先に書いたものが優先される
-EXTRA_BADGES: dict[int, list[str]] = {
-    2023: ["Award Candidate"],
-}
 
 
 def classify_link(href: str) -> str:
@@ -80,8 +78,6 @@ def parse_papers(html: str, extra_badges: list[str] | None = None) -> list[dict]
         if not title:
             continue
 
-        # タイトル要素とdiv.indentedの間のバッジを確認して発表種別を判定
-        # 優先順: Highlight > Award Candidate（extra_badges）> poster
         title_el = a if a else strong
         presentation_type = "poster"
         badge_map = {"Highlight": "highlight"}
@@ -123,32 +119,33 @@ def fetch_html(url: str, cache_path: Path) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CVPR 採択論文のリンク情報を収集")
+    parser = argparse.ArgumentParser(description="CVF 採択論文のリンク情報を収集")
+    add_conf_argument(parser)
     parser.add_argument("--year", type=int, default=2025, help="対象年度（デフォルト: 2025）")
     args = parser.parse_args()
 
-    if args.year not in YEAR_URLS:
-        supported = ", ".join(str(y) for y in YEAR_URLS)
-        print(f"エラー: 未対応の年度 {args.year}（対応: {supported}）")
+    conf_urls = CONF_YEAR_URLS.get(args.conf, {})
+    if args.year not in conf_urls:
+        supported = ", ".join(str(y) for y in conf_urls)
+        print(f"エラー: {args.conf.upper()} の未対応年度 {args.year}（対応: {supported}）")
         return
 
-    url = YEAR_URLS[args.year]
-    base = Path(__file__).parent / "output"
-    cache_dir = base / "cache"
-    result_dir = base / "result"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    result_dir.mkdir(parents=True, exist_ok=True)
-    cache_html = cache_dir / f"cache_cvpr{args.year}_accepted.html"
+    url = conf_urls[args.year]
+    base = Path(__file__).parent
+    c_dir = cache_dir(base, args.conf)
+    r_dir = result_dir(base, args.conf)
+    c_dir.mkdir(parents=True, exist_ok=True)
+    r_dir.mkdir(parents=True, exist_ok=True)
+    cache_html = c_dir / f"cache_{args.conf}{args.year}_accepted.html"
 
     html = fetch_html(url, cache_html)
-    extra_badges = EXTRA_BADGES.get(args.year, [])
+    extra_badges = CONF_EXTRA_BADGES.get(args.conf, {}).get(args.year, [])
     papers = parse_papers(html, extra_badges)
 
     if not papers:
         print("論文が見つかりませんでした。HTML 構造が変わっている可能性があります。")
         return
 
-    # 統計表示
     n = len(papers)
     link_counts: dict[str, int] = {"github": 0, "project_page": 0, "none": 0}
     ptype_counts: dict[str, int] = {}
@@ -156,27 +153,20 @@ def main() -> None:
         link_counts[p["link_type"]] = link_counts.get(p["link_type"], 0) + 1
         ptype_counts[p["presentation_type"]] = ptype_counts.get(p["presentation_type"], 0) + 1
 
-    print(f"\n=== CVPR {args.year} リンク集計 ===")
+    print(f"\n=== {args.conf.upper()} {args.year} リンク集計 ===")
     print(f"  総論文数         : {n}")
     print(f"  GitHub           : {link_counts['github']}  ({link_counts['github']/n*100:.1f}%)")
     print(f"  他 project page  : {link_counts['project_page']}  ({link_counts['project_page']/n*100:.1f}%)")
     print(f"  リンクなし       : {link_counts['none']}  ({link_counts['none']/n*100:.1f}%)")
-    print(f"  Highlight        : {ptype_counts.get('highlight', 0)}  ({ptype_counts.get('highlight', 0)/n*100:.1f}%)")
-    if extra_badges:
-        for badge in extra_badges:
-            key = badge.lower().replace(" ", "_")
-            cnt = ptype_counts.get(key, 0)
-            print(f"  {badge:<16} : {cnt}  ({cnt/n*100:.1f}%)")
-    posters = ptype_counts.get("poster", 0)
-    print(f"  通常 Poster      : {posters}  ({posters/n*100:.1f}%)")
+    for ptype, cnt in sorted(ptype_counts.items()):
+        print(f"  {ptype:<16} : {cnt}  ({cnt/n*100:.1f}%)")
 
-    # 保存
     df = pd.DataFrame(papers)
-    out_csv = result_dir / f"cvpr{args.year}_links.csv"
+    out_csv = r_dir / f"{args.conf}{args.year}_links.csv"
     df.to_csv(out_csv, index=False)
     print(f"\n→ CSV  保存: {out_csv}")
 
-    out_json = result_dir / f"cvpr{args.year}_links.json"
+    out_json = r_dir / f"{args.conf}{args.year}_links.json"
     out_json.write_text(json.dumps(papers, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"→ JSON 保存: {out_json}")
 

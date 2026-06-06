@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from conf_utils import add_conf_argument, cache_dir as get_cache_dir, result_dir as get_result_dir
+
 
 def extract_year(path: Path) -> str | None:
     m = re.search(r"(\d{4})", path.name)
@@ -15,13 +17,16 @@ def extract_year(path: Path) -> str | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="similarity 統計集計")
+    add_conf_argument(parser)
     parser.add_argument("--years", type=int, nargs="+", default=None, metavar="YEAR",
                         help="対象年度（省略時: キャッシュにある全年度）")
     args = parser.parse_args()
 
     base = Path(__file__).parent
+    c_dir = get_cache_dir(base, args.conf)
+    r_dir = get_result_dir(base, args.conf)
     cache_files = sorted(
-        p for p in (base / "output" / "cache").glob("cache_citations_202*.json")
+        p for p in c_dir.glob("cache_citations_202*.json")
         if not p.stem.endswith("_fixed")
     )
 
@@ -30,7 +35,7 @@ def main() -> None:
         cache_files = [p for p in cache_files if extract_year(p) in year_set]
 
     if not cache_files:
-        print("output/cache/cache_citations_202x.json が見つかりません。")
+        print(f"{c_dir}/cache_citations_202x.json が見つかりません。")
         return
 
     summary_rows: list[dict] = []
@@ -91,17 +96,16 @@ def main() -> None:
         print(f"    found : {row['matched_title'][:80]}")
 
     # --- 保存 ---
-    result_dir = base / "output" / "result"
-    result_dir.mkdir(parents=True, exist_ok=True)
-    sum_csv = result_dir / "similarity_summary.csv"
+    r_dir.mkdir(parents=True, exist_ok=True)
+    sum_csv = r_dir / "similarity_summary.csv"
     df_sum.to_csv(sum_csv, index=False)
     print(f"\n→ サマリー CSV: {sum_csv}")
 
-    det_csv = result_dir / "similarity_details.csv"
+    det_csv = r_dir / "similarity_details.csv"
     df_det.to_csv(det_csv, index=False)
     print(f"→ 詳細 CSV    : {det_csv}  ({len(df_det)} 件, sim < 1.0)")
 
-    det_json = result_dir / "similarity_details.json"
+    det_json = r_dir / "similarity_details.json"
     det_json.write_text(
         json.dumps(detail_rows, ensure_ascii=False, indent=2),
         encoding="utf-8",

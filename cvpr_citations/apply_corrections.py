@@ -21,6 +21,7 @@ from pathlib import Path
 
 import requests
 
+from conf_utils import CONF_VENUE_KEYWORDS, add_conf_argument, cache_dir as get_cache_dir
 from semantic_scholar import _search_one, _save_cache
 
 _FIELDS = "title,citationCount,year,venue,authors"
@@ -77,17 +78,16 @@ def _fetch_by_id(paper_id: str, headers: dict, delay: float) -> dict | None:
     return None
 
 
-def is_cvpr_match(entry: dict, target_year: int) -> bool:
+def is_conf_match(entry: dict, conf: str, target_year: int) -> bool:
     venue = (entry.get("venue") or "").lower()
     year = entry.get("year")
-    return (
-        "computer vision and pattern recognition" in venue
-        and year in (target_year - 2, target_year - 1, target_year)
-    )
+    keyword = CONF_VENUE_KEYWORDS.get(conf, "")
+    return keyword in venue and year in (target_year - 2, target_year - 1, target_year)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="corrections.json を適用して _fixed キャッシュを修正する")
+    add_conf_argument(parser)
     parser.add_argument("--input", default=None, metavar="FILE")
     parser.add_argument("--api-key", default=None, metavar="KEY")
     parser.add_argument("--dry-run", action="store_true", help="保存せずに変更内容を確認する")
@@ -99,7 +99,8 @@ def main() -> None:
     headers: dict = {"x-api-key": api_key} if api_key else {}
     delay = 1.1 if api_key else 3.1
 
-    corrections_path = Path(args.input) if args.input else base / "output" / "result" / "corrections.json"
+    c_dir = get_cache_dir(base, args.conf)
+    corrections_path = Path(args.input) if args.input else c_dir / "corrections.json"
     if not corrections_path.exists():
         print(f"ファイルが見つかりません: {corrections_path}")
         return
@@ -117,14 +118,13 @@ def main() -> None:
     print()
 
     # ── キャッシュ読み込み ───────────────────────────────────────
-    cache_dir = base / "output" / "cache"
     caches: dict[int, dict] = {}
 
     def _get_cache(year: int) -> dict:
         if year not in caches:
-            path = cache_dir / f"cache_citations_{year}_fixed.json"
+            path = c_dir / f"cache_citations_{year}_fixed.json"
             if not path.exists():
-                path = cache_dir / f"cache_citations_{year}.json"
+                path = c_dir / f"cache_citations_{year}.json"
             caches[year] = json.loads(path.read_text(encoding="utf-8"))
         return caches[year]
 
@@ -185,7 +185,7 @@ def main() -> None:
             continue
 
         new_data["query"]      = query
-        new_data["cvpr_match"] = is_cvpr_match(new_data, year)
+        new_data["cvpr_match"] = is_conf_match(new_data, args.conf, year)
 
         old = cache.get(query, {})
         print(f"    old title  : {old.get('title', '(なし)')[:80]}")
@@ -201,7 +201,7 @@ def main() -> None:
     # ── 保存 ──────────────────────────────────────────────────────
     if not args.dry_run:
         for year, data in caches.items():
-            out = cache_dir / f"cache_citations_{year}_fixed.json"
+            out = c_dir / f"cache_citations_{year}_fixed.json"
             _save_cache(data, str(out))
             print(f"→ 保存: {out}")
         print()

@@ -16,9 +16,12 @@ import argparse
 import json
 from pathlib import Path
 
+from conf_utils import add_conf_argument, cache_dir, result_dir
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="修正候補 JSON を生成する")
+    add_conf_argument(parser)
     parser.add_argument(
         "--years", type=int, nargs="+", default=list(range(2021, 2026)),
         metavar="YEAR", help="対象年度（デフォルト: 2021〜2025）",
@@ -33,20 +36,20 @@ def main() -> None:
     )
     parser.add_argument(
         "--output", default=None, metavar="FILE",
-        help="出力先 JSON ファイルパス（省略時: output/result/corrections.json）",
+        help="出力先 JSON ファイルパス（省略時: output/cache_{conf}/corrections.json）",
     )
     args = parser.parse_args()
 
     base = Path(__file__).parent
-    cache_dir = base / "output" / "cache"
-    result_dir = base / "output" / "result"
-    result_dir.mkdir(parents=True, exist_ok=True)
+    c_dir = cache_dir(base, args.conf)
+    r_dir = result_dir(base, args.conf)
+    r_dir.mkdir(parents=True, exist_ok=True)
 
     rows: list[dict] = []
 
     for year in sorted(args.years):
-        fixed = cache_dir / f"cache_citations_{year}_fixed.json"
-        base_cache = cache_dir / f"cache_citations_{year}.json"
+        fixed = c_dir / f"cache_citations_{year}_fixed.json"
+        base_cache = c_dir / f"cache_citations_{year}.json"
         path = fixed if fixed.exists() else base_cache
         if not path.exists():
             print(f"  [skip] キャッシュなし: {year}")
@@ -78,7 +81,7 @@ def main() -> None:
 
     rows.sort(key=lambda r: (r["target_year"], r["similarity"]))
 
-    out = Path(args.output) if args.output else result_dir / "corrections.json"
+    out = Path(args.output) if args.output else c_dir / "corrections.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(rows, ensure_ascii=False, indent=2),

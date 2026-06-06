@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from conf_utils import add_conf_argument, cache_dir as get_cache_dir, result_dir as get_result_dir
+
 
 def extract_year(path: Path) -> str | None:
     m = re.search(r"(\d{4})", path.name)
@@ -55,7 +57,8 @@ def topn_for_year(cache_path: Path, n: int) -> pd.DataFrame:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CVPR 引用数 Top-N 抽出")
+    parser = argparse.ArgumentParser(description="引用数 Top-N 抽出")
+    add_conf_argument(parser)
     parser.add_argument("--top", type=int, default=10, metavar="N", help="取得する上位件数（デフォルト: 10）")
     parser.add_argument("--years", type=int, nargs="+", default=None, metavar="YEAR",
                         help="対象年度（省略時: キャッシュにある全年度）")
@@ -63,10 +66,10 @@ def main() -> None:
     n = args.top
 
     base = Path(__file__).parent
-    cache_dir = base / "output" / "cache"
-    result_dir = base / "output" / "result"
+    c_dir = get_cache_dir(base, args.conf)
+    r_dir = get_result_dir(base, args.conf)
     cache_files = sorted(
-        p for p in cache_dir.glob("cache_citations_202*.json")
+        p for p in c_dir.glob("cache_citations_202*.json")
         if not p.stem.endswith("_fixed")
     )
 
@@ -75,7 +78,7 @@ def main() -> None:
         cache_files = [p for p in cache_files if extract_year(p) in year_set]
 
     if not cache_files:
-        print("output/cache/cache_citations_202x.json が見つかりません。")
+        print(f"{c_dir}/cache_citations_202x.json が見つかりません。")
         return
 
     all_rows: list[dict] = []
@@ -90,7 +93,7 @@ def main() -> None:
             print(f"  [skip] 有効なデータなし: {cache_path.name}")
             continue
 
-        print(f"\n=== CVPR {year} ===")
+        print(f"\n=== {args.conf.upper()} {year} ===")
         for rank, row in df.iterrows():
             authors_str = ", ".join(row["authors"][:3]) if isinstance(row.get("authors"), list) else ""
             print(f"  {rank:2}. [{int(row['citationCount']):>6}] {row['title']}")
@@ -106,7 +109,7 @@ def main() -> None:
                 "authors": authors_str,
             })
 
-        year_dir = result_dir / f"output_{year}"
+        year_dir = r_dir / f"output_{year}"
         year_dir.mkdir(parents=True, exist_ok=True)
         year_csv = year_dir / f"top{n}.csv"
         df[["title", "citationCount", "year", "venue", "authors"]].to_csv(year_csv)
@@ -116,12 +119,12 @@ def main() -> None:
         print("出力データがありません。")
         return
 
-    result_dir.mkdir(parents=True, exist_ok=True)
-    out_csv = result_dir / f"top{n}_all_years.csv"
+    r_dir.mkdir(parents=True, exist_ok=True)
+    out_csv = r_dir / f"top{n}_all_years.csv"
     pd.DataFrame(all_rows).to_csv(out_csv, index=False)
     print(f"\n→ 全年度 CSV  : {out_csv}")
 
-    out_json = result_dir / f"top{n}_all_years.json"
+    out_json = r_dir / f"top{n}_all_years.json"
     out_json.write_text(json.dumps(all_rows, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"→ 全年度 JSON : {out_json}")
 
