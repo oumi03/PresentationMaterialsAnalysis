@@ -1,16 +1,15 @@
 """cvpr_match=False かつ similarity < 1.0 の論文を JSON に書き出す.
 
-出力 JSON の "api" 欄に Semantic Scholar の paper ID（または URL）を
-手動で記入し，apply_corrections.py で修正を適用する．
+出力 JSON の "url" 欄を手動で記入し，apply_corrections.py で修正を適用する．
 
 使い方:
   uv run python export_corrections.py              # 2021〜2025
   uv run python export_corrections.py --years 2024 2025
 
-paper ID の確認方法:
-  https://www.semanticscholar.org で正しい論文を検索し，
-  URL 末尾の英数字部分（例: abc1234abcd...）を "api" 欄にコピーする．
-  https://api.semanticscholar.org/graph/v1/paper/{paper_id} の形式でも可．
+"url" 欄の記入方法:
+  同一論文とみなせる場合  : "ok"
+  別論文を指定したい場合  : https://www.semanticscholar.org の論文 URL をそのままコピー
+                           （URL 全体でも末尾の ID 部分だけでも可）
 """
 
 import argparse
@@ -74,7 +73,7 @@ def main() -> None:
                 "paper_year":    py,
                 "venue":         v.get("venue", ""),
                 "citationCount": v.get("citationCount"),
-                "api":           "",   # ← Semantic Scholar の paper ID を記入する
+                "url":           "",   # ← "ok" または Semantic Scholar の論文 URL を記入する
             })
 
     rows.sort(key=lambda r: (r["target_year"], r["similarity"]))
@@ -87,9 +86,10 @@ def main() -> None:
     )
     print(f"→ 保存: {out}  ({len(rows)} 件)")
     print()
-    print('  "api" 欄に Semantic Scholar の paper ID を記入してください．')
-    print('  例: "api": "649def34f8be52c8b66281af98ae884c09aef38b"')
-    print('  ID は https://www.semanticscholar.org の論文 URL 末尾から取得できます．')
+    print('  "url" 欄に記入してください:')
+    print('    同一論文とみなせる場合 : "ok"')
+    print('    別論文を指定したい場合 : Semantic Scholar の論文 URL（全体 or 末尾 ID どちらでも可）')
+    print('  例: "url": "https://www.semanticscholar.org/paper/Title/649def34f8be52c8b66281af98ae884c09aef38b"')
 
 
 if __name__ == "__main__":

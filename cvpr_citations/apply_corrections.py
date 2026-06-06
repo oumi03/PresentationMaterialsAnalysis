@@ -1,8 +1,8 @@
 """corrections.json の指示に従い，_fixed キャッシュを修正する.
 
-api フィールドの意味:
+url フィールドの意味:
   "ok"       同一論文とみなす → cvpr_match=True にしてそのまま保持
-  URL/ID     その論文が正解 → S2 API で取得して matched_title・引用数を更新
+  URL        Semantic Scholar の論文 URL（全体 or 末尾 ID）→ 取得して matched_title・引用数を更新
   タイトル文字列  タイトル検索で正解を探す → 取得して更新
   ""（空）   スキップ
 
@@ -106,9 +106,9 @@ def main() -> None:
 
     corrections: list[dict] = json.loads(corrections_path.read_text(encoding="utf-8"))
 
-    ok_entries  = [c for c in corrections if _is_ok(c.get("api", ""))]
-    url_entries = [c for c in corrections if c.get("api", "").strip() and not _is_ok(c.get("api", ""))]
-    skip_entries = [c for c in corrections if not c.get("api", "").strip()]
+    ok_entries  = [c for c in corrections if _is_ok(c.get("url", ""))]
+    url_entries = [c for c in corrections if c.get("url", "").strip() and not _is_ok(c.get("url", ""))]
+    skip_entries = [c for c in corrections if not c.get("url", "").strip()]
 
     print(f"=== 修正適用 ({'dry-run' if args.dry_run else '実行'}) ===")
     print(f"  ok（cvpr_match=True に昇格） : {len(ok_entries)} 件")
@@ -161,11 +161,11 @@ def main() -> None:
     for c in url_entries:
         year  = c["target_year"]
         query = c["query_title"]
-        api   = c["api"].strip()
+        api   = c["url"].strip()
         cache = _get_cache(year)
 
         print(f"  [{year}] {query[:70]}")
-        print(f"    api  : {api[:80]}")
+        print(f"    url  : {api[:80]}")
 
         # paper ID が抽出できれば ID 取得，できなければタイトル検索
         paper_id = _extract_paper_id(api)

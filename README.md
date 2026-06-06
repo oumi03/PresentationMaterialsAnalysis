@@ -126,7 +126,7 @@ CVF の公開ページをスクレイプして論文タイトルを収集し，S
   "query_title": "論文タイトル（CVF ページ記載）",
   "matched_title": "S2 が返したタイトル",
   "similarity": 0.83,
-  "api": ""   ← ここを記入
+  "url": ""   ← ここを記入
 }
 ```
 
@@ -136,12 +136,12 @@ CVF の公開ページをスクレイプして論文タイトルを収集し，S
 | Semantic Scholar の論文 URL | その論文が正解 → タイトル・引用数を差し替え |
 | `""` (空欄のまま) | スキップ（変更なし） |
 
-**paper ID の取得方法:**  
-`https://www.semanticscholar.org` で正しい論文を検索し，URL 末尾の英数字列をそのまま貼り付ける．
+**URL の取得方法:**  
+`https://www.semanticscholar.org` で正しい論文を検索し，URL をそのままコピーして貼り付ける．URL 全体でも末尾の ID 部分だけでも，どちらでも動作する．
 
 ```
 https://www.semanticscholar.org/paper/Title-of-Paper/649def34f8be52c8b66281af98ae884c09aef38b
-                                                       ↑ この部分
+↑ URL 全体をそのままコピーして貼ればよい
 ```
 
 ---

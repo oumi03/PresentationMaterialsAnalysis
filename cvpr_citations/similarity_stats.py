@@ -1,5 +1,6 @@
 """各年度の cache_citations_202x.json から similarity 統計を集計して保存する."""
 
+import argparse
 import json
 import re
 from pathlib import Path
@@ -13,8 +14,20 @@ def extract_year(path: Path) -> str | None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="similarity 統計集計")
+    parser.add_argument("--years", type=int, nargs="+", default=None, metavar="YEAR",
+                        help="対象年度（省略時: キャッシュにある全年度）")
+    args = parser.parse_args()
+
     base = Path(__file__).parent
-    cache_files = sorted((base / "output" / "cache").glob("cache_citations_202*.json"))
+    cache_files = sorted(
+        p for p in (base / "output" / "cache").glob("cache_citations_202*.json")
+        if not p.stem.endswith("_fixed")
+    )
+
+    if args.years:
+        year_set = {str(y) for y in args.years}
+        cache_files = [p for p in cache_files if extract_year(p) in year_set]
 
     if not cache_files:
         print("output/cache/cache_citations_202x.json が見つかりません。")

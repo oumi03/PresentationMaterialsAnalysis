@@ -57,13 +57,22 @@ def topn_for_year(cache_path: Path, n: int) -> pd.DataFrame:
 def main() -> None:
     parser = argparse.ArgumentParser(description="CVPR 引用数 Top-N 抽出")
     parser.add_argument("--top", type=int, default=10, metavar="N", help="取得する上位件数（デフォルト: 10）")
+    parser.add_argument("--years", type=int, nargs="+", default=None, metavar="YEAR",
+                        help="対象年度（省略時: キャッシュにある全年度）")
     args = parser.parse_args()
     n = args.top
 
     base = Path(__file__).parent
     cache_dir = base / "output" / "cache"
     result_dir = base / "output" / "result"
-    cache_files = sorted(cache_dir.glob("cache_citations_202*.json"))
+    cache_files = sorted(
+        p for p in cache_dir.glob("cache_citations_202*.json")
+        if not p.stem.endswith("_fixed")
+    )
+
+    if args.years:
+        year_set = {str(y) for y in args.years}
+        cache_files = [p for p in cache_files if extract_year(p) in year_set]
 
     if not cache_files:
         print("output/cache/cache_citations_202x.json が見つかりません。")
