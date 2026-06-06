@@ -53,15 +53,29 @@ _LABEL: dict[str, str] = {
 _PALETTE = ["#4C72B0", "#DD8452", "#55A868", "#C44E52"]
 
 
+def _is_valid_match(entry: dict) -> bool:
+    """found かつ（similarity=1 or cvpr_match=True）のエントリを有効とみなす."""
+    if not entry.get("found"):
+        return False
+    if entry.get("cvpr_match"):
+        return True
+    return entry.get("similarity", 0.0) >= 0.5
+
+
 def load_citations(year: int, out_dir: Path) -> pd.DataFrame:
+    # _fixed があればそちらを優先して読み込む
+    fixed = out_dir / "cache" / f"cache_citations_{year}_fixed.json"
     cache = out_dir / "cache" / f"cache_citations_{year}.json"
-    if not cache.exists():
+    path = fixed if fixed.exists() else cache
+    if not path.exists():
         raise FileNotFoundError(f"{cache} が見つかりません。run_full.sh を先に実行してください。")
-    data = json.loads(cache.read_text(encoding="utf-8"))
+    if path == fixed:
+        print(f"  [fixed] {path.name} を使用")
+    data = json.loads(path.read_text(encoding="utf-8"))
     rows = [
         {"title_key": k, "citationCount": v["citationCount"]}
         for k, v in data.items()
-        if v.get("found") and v.get("citationCount") is not None
+        if _is_valid_match(v) and v.get("citationCount") is not None
     ]
     df = pd.DataFrame(rows)
     df["citationCount"] = pd.to_numeric(df["citationCount"], errors="coerce")

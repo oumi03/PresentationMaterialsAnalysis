@@ -28,7 +28,10 @@ def main() -> None:
         if year is None:
             continue
 
-        data = json.loads(cache_path.read_text(encoding="utf-8"))
+        # _fixed があればそちらを優先
+        fixed = cache_path.with_name(cache_path.stem + "_fixed.json")
+        path = fixed if fixed.exists() else cache_path
+        data = json.loads(path.read_text(encoding="utf-8"))
         found = [v for v in data.values() if v.get("found")]
 
         if not found:

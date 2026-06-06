@@ -24,9 +24,24 @@ def extract_year(path: Path) -> str | None:
     return m.group(1) if m else None
 
 
+def _is_valid(entry: dict) -> bool:
+    if not entry.get("found"):
+        return False
+    if entry.get("cvpr_match"):
+        return True
+    return entry.get("similarity", 0.0) >= 0.5
+
+
+def _resolve_cache(cache_path: Path) -> Path:
+    """_fixed があればそちらを優先する."""
+    fixed = cache_path.with_name(cache_path.stem + "_fixed.json")
+    return fixed if fixed.exists() else cache_path
+
+
 def topn_for_year(cache_path: Path, n: int) -> pd.DataFrame:
-    data = json.loads(cache_path.read_text(encoding="utf-8"))
-    rows = [v for v in data.values() if v.get("found") and v.get("citationCount") is not None]
+    path = _resolve_cache(cache_path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows = [v for v in data.values() if _is_valid(v) and v.get("citationCount") is not None]
     if not rows:
         return pd.DataFrame()
 
