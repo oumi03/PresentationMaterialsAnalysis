@@ -32,6 +32,10 @@ def main() -> None:
         "--year-window", type=int, default=2,
         help="paper_year >= target_year - N のみ対象（デフォルト: 2）",
     )
+    parser.add_argument(
+        "--output", default=None, metavar="FILE",
+        help="出力先 JSON ファイルパス（省略時: output/result/corrections.json）",
+    )
     args = parser.parse_args()
 
     base = Path(__file__).parent
@@ -75,7 +79,8 @@ def main() -> None:
 
     rows.sort(key=lambda r: (r["target_year"], r["similarity"]))
 
-    out = result_dir / "corrections.json"
+    out = Path(args.output) if args.output else result_dir / "corrections.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(rows, ensure_ascii=False, indent=2),
         encoding="utf-8",
