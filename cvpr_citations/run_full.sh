@@ -22,8 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # ============================================================
 # パラメータ設定
 # ============================================================
-CONF=iccv         # 対象会議（cvpr / iccv / wacv）
-YEAR=2025         # 対象年度
+CONF=wacv         # 対象会議（cvpr / iccv / wacv）
+YEAR=2026         # 対象年度
 API_KEY="${SEMANTIC_SCHOLAR_API_KEY:-}"   # .env または環境変数から取得
                   # キー取得先: https://www.semanticscholar.org/product/api#api-key-form
 # ============================================================

@@ -22,19 +22,21 @@ CONF_YEAR_URLS: dict[str, dict[int, str]] = {
     "iccv": {
         2021: "https://iccv.thecvf.com/Conferences/2021/AcceptedPapers",
         2023: "https://iccv.thecvf.com/Conferences/2023/AcceptedPapers",
+        2025: "https://iccv.thecvf.com/Conferences/2025/AcceptedPapers",
     },
     "wacv": {
         2022: "https://wacv.thecvf.com/Conferences/2022/AcceptedPapers",
         2023: "https://wacv.thecvf.com/Conferences/2023/AcceptedPapers",
         2024: "https://wacv.thecvf.com/Conferences/2024/AcceptedPapers",
         2025: "https://wacv.thecvf.com/Conferences/2025/AcceptedPapers",
+        2026: "https://wacv.thecvf.com/Conferences/2026/AcceptedPapers",
     },
 }
 
 # scrape_links.py: 年度ごとの追加バッジ（presentation_type に反映）
 CONF_EXTRA_BADGES: dict[str, dict[int, list[str]]] = {
     "cvpr": {2023: ["Award Candidate"]},
-    "iccv": {2021: ["Oral"], 2023: ["Oral"]},
+    "iccv": {2021: ["Oral"], 2023: ["Oral"], 2025: ["Oral"]},
     "wacv": {},
 }
 
